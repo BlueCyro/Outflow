@@ -37,7 +37,7 @@ public class FullBatcher : IDisposable
         if (IsProcessing)
         {
             deltas.Enqueue(delta);
-            Outflow.Msg($"Work is processing, queued: {delta.GetType().Name}{(delta is ControlMessage msg ? $",{msg.ControlMessageType}" : "")}");
+            Outflow.Debug($"Work is processing, queued: {delta.GetType().Name}{(delta is ControlMessage msg ? $",{msg.ControlMessageType}" : "")}");
         }
         else
             return false;
@@ -62,7 +62,7 @@ public class FullBatcher : IDisposable
                 batch.Dispose();
                 batcherTasks.TryDequeue(out FullBatch _);
             }
-            Outflow.Msg($"FullBatches done processing in {(DateTime.Now - last).TotalMilliseconds}ms");
+            Outflow.Debug($"FullBatches done processing in {(DateTime.Now - last).TotalMilliseconds}ms");
         }
     }
 
@@ -76,20 +76,23 @@ public class FullBatcher : IDisposable
         
         while (deltas.TryDequeue(out SyncMessage queued))
         {
-            if (queued is DeltaBatch dt)
-            {
-                // DeltaBatch newDt = new(lastDelta.SenderStateVersion, lastDelta.SenderSyncTick, queued.Sender, dt);
-                // newDt.SetSenderTime(lastDelta.SenderTime);
-                // queued.Targets.ForEach(newDt.Targets.Add);
-                session.NetworkManager.TransmitData(queued.Encode());
-                queued.Dispose();
-                // newDt.Dispose();
-            }
-            else
-            {
-                session.NetworkManager.TransmitData(queued.Encode());
-                queued.Dispose();
-            }
+            // if (queued is DeltaBatch dt)
+            // {
+            //     // DeltaBatch newDt = new(lastDelta.SenderStateVersion, lastDelta.SenderSyncTick, queued.Sender, dt);
+            //     // newDt.SetSenderTime(lastDelta.SenderTime);
+            //     // queued.Targets.ForEach(newDt.Targets.Add);
+            //     session.NetworkManager.TransmitData(queued.Encode());
+            //     queued.Dispose();
+            //     // newDt.Dispose();
+            // }
+            // else
+            // {
+            //     session.NetworkManager.TransmitData(queued.Encode());
+            //     queued.Dispose();
+            // }
+
+            session.NetworkManager.TransmitData(queued.Encode());
+            queued.Dispose();
             flushed++;
         }
         return flushed;

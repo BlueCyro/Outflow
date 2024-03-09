@@ -99,7 +99,7 @@ public class Outflow : ResoniteMod
                                     break;
                                 case StreamMessage stm:
                                     setStreams(__instance, __instance.TotalSentStreams + 1);
-                                    Msg($"Stream sent, sender version: {stm.SenderStateVersion}");
+                                    Debug($"Stream sent, sender version: {stm.SenderStateVersion}");
                                     break;
                             }
                             __instance.NetworkManager.TransmitData(val.Encode());
