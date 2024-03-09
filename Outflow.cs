@@ -38,20 +38,20 @@ public class Outflow : ResoniteMod
             var setConfirms = seshType.GetProperty("TotalSentConfirmations").GetSetMethod(true).CreateDelegate<Action<object, int>>();
             var setControls = seshType.GetProperty("TotalSentControls").GetSetMethod(true).CreateDelegate<Action<object, int>>();
             var setStreams = seshType.GetProperty("TotalSentStreams").GetSetMethod(true).CreateDelegate<Action<object, int>>();
-            var getConnections = seshType.GetMethod("GetConnections", BindingFlags.Instance | BindingFlags.NonPublic).CreateDelegate<Action<object, List<User>, List<IConnection>, bool>>();
             ConcurrentDictionary<Task, byte> fullBatchTasks = new();
             Queue<DeltaBatch> heldDeltas = new();
-            using FullBatcher batcher = new(__instance);
+            FullBatcher batcher = new(__instance);
 
             
             
-            Msg($"Prefixed EncodeLoop successfully!");
+            Msg($"Replaced EncodeLoop successfully!");
             while (true)
             {
                 ___encodingThreadEvent.WaitOne();
                 if (__instance.IsDisposed)
                 {
                     ___encodingThreadEvent.Dispose();
+                    batcher.Dispose();
                     break;
                 }
                 else
@@ -63,23 +63,26 @@ public class Outflow : ResoniteMod
                             switch (val)
                             {
                                 case DeltaBatch dtb:
+                                    setDeltas(__instance, __instance.TotalSentDeltas + 1); // We've basically sent them... just not yet :)
+                                    
                                     if (batcher.TryQueueMessage(dtb))
                                     {
-                                        setDeltas(__instance, __instance.TotalSentDeltas + 1);
-                                        Msg("Queueing delta for later since full batch is processing");
+                                        Debug("Queueing delta for later since full batch is processing");
                                         continue;
                                     }
-                                    else if (batcher.FlushQueued(dtb) > 0)
+                                    else
                                     {
-                                        Msg("Flushed all queued deltas");
+                                        DateTime last = DateTime.Now;
+                                        int flushed = batcher.FlushQueued(dtb);
+                                        double totalMillis = (DateTime.Now - last).TotalMilliseconds;
+                                        if (flushed > 0)
+                                            Debug($"Flushed all queued deltas in {totalMillis}ms");
+
                                     }
-                                    
-                                    setDeltas(__instance, __instance.TotalSentDeltas + 1);
-                                    Msg($"Sent delta #{dtb.SenderStateVersion} for {__instance.World.Name}");
                                     break;
                                 case FullBatch fb:
                                     setFulls(__instance, __instance.TotalSentFulls + 1);
-                                    Msg("FullBatch queue");
+                                    Debug("FullBatch queued");
                                     batcher.QueueEncode(fb);
                                     continue;
                                 case ConfirmationMessage _:
@@ -89,12 +92,14 @@ public class Outflow : ResoniteMod
                                     setControls(__instance, __instance.TotalSentControls + 1);
                                     if (ctm.ControlMessageType == ControlMessage.Message.JoinStartDelta && batcher.TryQueueMessage(ctm))
                                     {
+                                        Debug($"Queued JoinStartDelta");
                                         continue;
                                     }
+                                    Debug($"JoinStartDelta sent normally");
                                     break;
                                 case StreamMessage stm:
                                     setStreams(__instance, __instance.TotalSentStreams + 1);
-                                    Msg($"Stream flow: {stm.StreamStateVersion}");
+                                    Msg($"Stream sent, sender version: {stm.SenderStateVersion}");
                                     break;
                             }
                             __instance.NetworkManager.TransmitData(val.Encode());
