@@ -9,7 +9,7 @@ public class FullBatcher : IDisposable
     private readonly ConcurrentQueue<SyncMessage> deltas = new();
     private readonly AutoResetEvent reset = new(false);
     private readonly Thread processThread;
-    public bool IsProcessing {get; private set; }
+    public bool IsProcessing => batcherTasks.Count > 0;
     public bool Disposed { get; private set; }
     private readonly Session session;
 
@@ -35,7 +35,10 @@ public class FullBatcher : IDisposable
     public bool TryQueueMessage(SyncMessage delta)
     {
         if (IsProcessing)
+        {
             deltas.Enqueue(delta);
+            Outflow.Msg($"Work is processing, queued: {delta.GetType().Name}{(delta is ControlMessage msg ? $",{msg.ControlMessageType}" : "")}");
+        }
         else
             return false;
         
@@ -47,16 +50,19 @@ public class FullBatcher : IDisposable
 
     public void Process()
     {
-        while (true && !Disposed)
+        while (!Disposed)
         {
             reset.WaitOne();
-            IsProcessing = true;
-            while (batcherTasks.TryDequeue(out FullBatch batch) && !Disposed)
+            if (Disposed)
+                break;
+            DateTime last = DateTime.Now;
+            while (batcherTasks.TryPeek(out FullBatch batch) && !Disposed)
             {
                 session.NetworkManager.TransmitData(batch.Encode());
                 batch.Dispose();
+                batcherTasks.TryDequeue(out FullBatch _);
             }
-            IsProcessing = false;
+            Outflow.Msg($"FullBatches done processing in {(DateTime.Now - last).TotalMilliseconds}ms");
         }
     }
 
@@ -72,12 +78,12 @@ public class FullBatcher : IDisposable
         {
             if (queued is DeltaBatch dt)
             {
-                DeltaBatch newDt = new(lastDelta.SenderStateVersion, lastDelta.SenderSyncTick, queued.Sender, dt);
-                newDt.SetSenderTime(lastDelta.SenderTime);
-                queued.Targets.ForEach(newDt.Targets.Add);
-                session.NetworkManager.TransmitData(newDt.Encode());
+                // DeltaBatch newDt = new(lastDelta.SenderStateVersion, lastDelta.SenderSyncTick, queued.Sender, dt);
+                // newDt.SetSenderTime(lastDelta.SenderTime);
+                // queued.Targets.ForEach(newDt.Targets.Add);
+                session.NetworkManager.TransmitData(queued.Encode());
                 queued.Dispose();
-                newDt.Dispose();
+                // newDt.Dispose();
             }
             else
             {
@@ -94,5 +100,11 @@ public class FullBatcher : IDisposable
     public void Dispose()
     {
         Disposed = true;
+        reset.Set();
+    }
+
+    ~FullBatcher()
+    {
+        Dispose();
     }
 }
