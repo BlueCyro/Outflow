@@ -1,6 +1,6 @@
 # 🌊 Outflow: Keep those packets coming!
 
-Outflow is a mod for [Resonite](https://resonite.com) via [ResoniteModLoader](https://github.com/resonite-modding-group/ResoniteModLoader) that aims to mitigate or outright eliminate interruptions in voice and player movements when new users join particularly large sessions.
+Outflow is a mod for [Resonite](https://resonite.com) via [ResoniteModLoader](https://github.com/resonite-modding-group/ResoniteModLoader) that aims to mitigate or outright eliminate interruptions in voice, player movements or any streamed data when new users join particularly large sessions.
 
 ## Usage
 Simply drop the mod into your `rml_mods` folder within the Resonite directory and you're done! This mod should work on both Headless clients and normal clients. Outflow is only required by the host of the world to work for everyone in the session.
