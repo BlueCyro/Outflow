@@ -51,11 +51,11 @@ public class Outflow : ResoniteMod
         {
             // Since this method is no longer coming from the class itself, reflection is required for all of the property setters to properly increment the stats
             Type seshType = typeof(Session);
-            var setDeltas = seshType.GetProperty("TotalSentDeltas").GetSetMethod(true).CreateDelegate<Action<object, int>>();
-            var setFulls = seshType.GetProperty("TotalSentFulls").GetSetMethod(true).CreateDelegate<Action<object, int>>();
-            var setConfirms = seshType.GetProperty("TotalSentConfirmations").GetSetMethod(true).CreateDelegate<Action<object, int>>();
-            var setControls = seshType.GetProperty("TotalSentControls").GetSetMethod(true).CreateDelegate<Action<object, int>>();
-            var setStreams = seshType.GetProperty("TotalSentStreams").GetSetMethod(true).CreateDelegate<Action<object, int>>();
+            var setDeltas = (Action<int>)seshType.GetProperty("TotalSentDeltas").GetSetMethod(true).CreateDelegate(typeof(Action<int>), __instance);
+            var setFulls = (Action<int>)seshType.GetProperty("TotalSentFulls").GetSetMethod(true).CreateDelegate(typeof(Action<int>), __instance);
+            var setConfirms = (Action<int>)seshType.GetProperty("TotalSentConfirmations").GetSetMethod(true).CreateDelegate(typeof(Action<int>), __instance);
+            var setControls = (Action<int>)seshType.GetProperty("TotalSentControls").GetSetMethod(true).CreateDelegate(typeof(Action<int>), __instance);
+            var setStreams = (Action<int>)seshType.GetProperty("TotalSentStreams").GetSetMethod(true).CreateDelegate(typeof(Action<int>), __instance);
 
 
             ConcurrentDictionary<Task, byte> fullBatchTasks = new();
@@ -87,19 +87,19 @@ public class Outflow : ResoniteMod
                         switch (val)
                         {
                             case DeltaBatch dtb:
-                                setDeltas(__instance, __instance.TotalSentDeltas + 1);
+                                setDeltas(__instance.TotalSentDeltas + 1);
                                 break;
                             case FullBatch fb:
-                                setFulls(__instance, __instance.TotalSentFulls + 1);
+                                setFulls(__instance.TotalSentFulls + 1);
                                 break;
                             case ConfirmationMessage cfm:
-                                setConfirms(__instance, __instance.TotalSentConfirmations + 1);
+                                setConfirms(__instance.TotalSentConfirmations + 1);
                                 break;
                             case ControlMessage ctm:
-                                setControls(__instance, __instance.TotalSentControls + 1);
+                                setControls(__instance.TotalSentControls + 1);
                                 break;
                             case StreamMessage stm:
-                                setStreams(__instance, __instance.TotalSentStreams + 1);
+                                setStreams(__instance.TotalSentStreams + 1);
                                 Debug($"Stream sent, sender version: {stm.SenderStateVersion}");
                                 break;
                         }

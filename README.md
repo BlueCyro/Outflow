@@ -113,3 +113,10 @@ What I mean by this, is that they don't care about the philosophy behind why som
 All this is to say that just because a mod can do it, doesn't mean it's the way it should be done. Modding isn't bad (it's actually really good for a platform's longevity it turns out), but it's not the way a game should be developed officially. The YDMS Team work very hard at giving us a stable foundation to base our wacky inventions off of.
 
 You can either use a bulldozer, or recognize why a wall is there in the first place.
+<br/><br/>
+
+<p align="right">
+    <sub>
+        💙💚 Feel free to support me via <a href="https://paypal.me/BlueCyro">PayPal</a>
+    </sub>
+</div>

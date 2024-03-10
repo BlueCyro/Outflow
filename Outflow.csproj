@@ -29,11 +29,6 @@
     <Reference Include="ResoniteModLoader">
       <HintPath>$(ResonitePath)Libraries/ResoniteModLoader.dll</HintPath>
     </Reference>
-    <Reference Include="0Harmony">
-      <HintPath>$(ResonitePath)0Harmony.dll</HintPath>
-      <HintPath Condition="Exists('$(ResonitePath)rml_libs/0Harmony.dll')">$(ResonitePath)rml_libs\0Harmony.dll</HintPath>
-      <HintPath Condition="Exists('$(ResonitePath)Libraries/0Harmony.dll')">$(ResonitePath)Libraries\0Harmony.dll</HintPath>
-    </Reference>
     <Reference Include="FrooxEngine">
       <HintPath>$(ResonitePath)Headless/FrooxEngine.dll</HintPath>
     </Reference>
@@ -43,6 +38,10 @@
     <Reference Include="Elements.Assets">
       <HintPath>$(ResonitePath)Headless/Elements.Assets.dll</HintPath>
     </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Lib.Harmony" Version="2.2.2.0" />
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
