@@ -5,6 +5,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    
+    <Version>0.0.0.1</Version>
+    <AssemblyVersion>$(Version)</AssemblyVersion>
+    <Authors>Cyro</Authors>
+    <Product>Outflow packet manager</Product>
+    <Description>Mitigate hitching when new users join a session in Resonite</Description>
+    <Copyright>Copyright (c) 2023 Riley Fields</Copyright>
+
     <DocumentationFile>./Docs.xml</DocumentationFile>
   </PropertyGroup>
 
@@ -38,7 +46,18 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Copy SourceFiles="$(OutDir)$(TargetFileName)" DestinationFolder="P:\Resonite\Headless\Headless\rml_mods" />
+    <!--Copy SourceFiles="$(OutDir)$(TargetFileName)" DestinationFolder="./" /-->
     <!--Exec Command="C:\Program Files (x86)\Steam\steamapps\common\Resonite\Resonite.exe -Screen -screen-fullscreen 1 -DontAutoOpenCloudHome -CachePath C:\Resonite\Cache -DataPath C:\Resonite\Data -CTAATemporalEdgePower 1.0 -CTAASharpnessEnabled False -CTAAAdaptiveSharpness 0.4 -LoadAssembly Libraries\ResoniteModLoader.dll" /-->
+  </Target>
+
+  <Target Name="MoveBinary" AfterTargets="Publish">
+    <Copy SourceFiles="$(PublishDir)$(TargetFileName)" DestinationFolder="." />
+  </Target>
+
+  <Target Name="DeepClean">
+    <RemoveDir Directories="./bin" />
+    <RemoveDir Directories="./obj" />
+    <Delete Files="./$(TargetFileName)" />
+    <Exec Command="dotnet restore" />
   </Target>
 </Project>

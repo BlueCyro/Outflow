@@ -14,7 +14,7 @@ public class Outflow : ResoniteMod
 {
     public override string Name => "Outflow";
     public override string Author => "Cyro";
-    public override string Version => "1.0.0";
+    public override string Version => typeof(Outflow).Assembly.GetName().Version.ToString();
     public override string Link => "https://github.com/RileyGuy/Outflow";
     public static ModConfiguration? Config;
 
@@ -77,7 +77,7 @@ public class Outflow : ResoniteMod
                     break;
                 }
 
-                
+
                 while (___messagesToTransmit.TryDequeue(out SyncMessage val)) // De-queue messages to send
                 {
                     DateTime last = DateTime.Now;
