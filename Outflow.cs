@@ -80,10 +80,7 @@ public class Outflow : ResoniteMod
 
                 while (___messagesToTransmit.TryDequeue(out SyncMessage val)) // De-queue messages to send
                 {
-                    DateTime last = DateTime.Now;
                     int flushed = batcher.TryFlushQueuedMessages(); // Try to flush queued messages. Only flushes if no FullBatches are cooking and messages are ready to be de-queued
-                    double totalMillis = (DateTime.Now - last).TotalMilliseconds;
-                    
 
                     if (val.Targets.Count > 0)
                     {
