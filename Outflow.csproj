@@ -5,32 +5,35 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+    <DocumentationFile>./Docs.xml</DocumentationFile>
   </PropertyGroup>
 
   <!--This will test for the default Steam installation paths for Resonite on Windows and Linux.-->
   <PropertyGroup Condition="'$(ResonitePath)'==''">
-    <ResonitePath>C:\Program Files (x86)\Steam\steamapps\common\Resonite\</ResonitePath> 
+    <ResonitePath Condition="'$(OS)' == 'Windows_NT' and Exists('C:\Program Files (x86)\Steam\steamapps\common\Resonite\')">C:\Program Files (x86)\Steam\steamapps\common\Resonite\</ResonitePath> 
+    <ResonitePath Condition="'$(OS)' != 'Windows_NT' and Exists('$(HOME)/.local/share/Steam/steamapps/common/Resonite/')">$(HOME)/.local/share/Steam/steamapps/common/Resonite/</ResonitePath>
     <!--If neither path above exists, you can define your custom Resonite install directory here -->
     <ResonitePath Condition="'$(ResonitePath)'==''">/Custom/Resonite/Install/Path</ResonitePath>
+    <HeadlessPath>$(ResonitePath)Headless\</HeadlessPath>
   </PropertyGroup>
 
   <ItemGroup>
     <Reference Include="ResoniteModLoader">
-      <HintPath>$(ResonitePath)Libraries\ResoniteModLoader.dll</HintPath>
+      <HintPath>$(ResonitePath)Libraries/ResoniteModLoader.dll</HintPath>
     </Reference>
     <Reference Include="0Harmony">
       <HintPath>$(ResonitePath)0Harmony.dll</HintPath>
-      <HintPath Condition="Exists('$(ResonitePath)rml_libs\0Harmony.dll')">$(ResonitePath)rml_libs\0Harmony.dll</HintPath>
-      <HintPath Condition="Exists('$(ResonitePath)Libraries\0Harmony.dll')">$(ResonitePath)Libraries\0Harmony.dll</HintPath>
+      <HintPath Condition="Exists('$(ResonitePath)rml_libs/0Harmony.dll')">$(ResonitePath)rml_libs\0Harmony.dll</HintPath>
+      <HintPath Condition="Exists('$(ResonitePath)Libraries/0Harmony.dll')">$(ResonitePath)Libraries\0Harmony.dll</HintPath>
     </Reference>
     <Reference Include="FrooxEngine">
-      <HintPath>$(ResonitePath)Headless\FrooxEngine.dll</HintPath>
+      <HintPath>$(ResonitePath)Headless/FrooxEngine.dll</HintPath>
     </Reference>
     <Reference Include="Elements.Core">
-      <HintPath>$(ResonitePath)Headless\Elements.Core.dll</HintPath>
+      <HintPath>$(ResonitePath)Headless/Elements.Core.dll</HintPath>
     </Reference>
     <Reference Include="Elements.Assets">
-      <HintPath>$(ResonitePath)Headless\Elements.Assets.dll</HintPath>
+      <HintPath>$(ResonitePath)Headless/Elements.Assets.dll</HintPath>
     </Reference>
   </ItemGroup>
 
