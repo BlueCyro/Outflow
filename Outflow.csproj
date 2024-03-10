@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     
-    <Version>0.0.0.1</Version>
+    <Version>0.0.0.2</Version>
     <AssemblyVersion>$(Version)</AssemblyVersion>
     <Authors>Cyro</Authors>
     <Product>Outflow packet manager</Product>
