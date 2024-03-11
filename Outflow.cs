@@ -17,12 +17,13 @@ public class Outflow : ResoniteMod
     public override string Link => "https://github.com/RileyGuy/Outflow";
     public static ModConfiguration? Config;
 
+
+
     public override void OnEngineInit()
     {
         Harmony harmony = new("net.Cyro.Outflow");
         Config = GetConfiguration();
         Config?.Save(true);
-
         harmony.PatchAll();
     }
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
@@ -46,7 +47,7 @@ public class Outflow : ResoniteMod
         public static IEnumerable<CodeInstruction> EnqueueForTransmission_Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator iLGen)
         {
             yield return new(OpCodes.Ldarg_0); // Load the Session instance to pass to the enqueue method
-            yield return new(OpCodes.Ldarg_1); // Load the SyncMessage to pass through to the enqueue method
+            yield return new(OpCodes.Ldarg_1); // Load the SyncMessage to pass to the enqueue method
             yield return new(OpCodes.Call, ((Delegate)SessionHelpers.EnqueueStreamForTransmission).Method); // Call the enqueue method
             
 
