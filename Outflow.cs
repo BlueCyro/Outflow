@@ -151,6 +151,8 @@ public class Outflow : ResoniteMod
         /// </summary>
         /// <param name="__instance"></param>
         /// <param name="__result"></param>
+        [HarmonyPostfix]
+        [HarmonyPatch("MessagesToTransmitCount", MethodType.Getter)]
         public static void MessagesToTransmitCount_Postfix(Session __instance, ref int __result)
         {
             if (SessionHelpers.SessionStreamQueue.TryGetValue(__instance, out var data))
