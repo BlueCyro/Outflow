@@ -4,69 +4,83 @@
         <name>Outflow</name>
     </assembly>
     <members>
-        <member name="T:Outflow.FullBatcher">
-            <summary>
-            Encodes FullBatches and queues reliable messages to be sent when processing is complete
-            </summary>
-        </member>
-        <member name="P:Outflow.FullBatcher.IsProcessing">
-            <summary>
-            Whether any FullBatch messages are being encoded
-            </summary>
-        </member>
-        <member name="P:Outflow.FullBatcher.Disposed">
-            <summary>
-            True if the batcher is no longer valid for use
-            </summary>
-        </member>
-        <member name="M:Outflow.FullBatcher.#ctor(FrooxEngine.Session)">
-            <summary>
-            Instantiates a batcher for a given Session
-            </summary>
-            <param name="curSession">The session to operate on</param>
-        </member>
-        <member name="M:Outflow.FullBatcher.QueueFullEncode(FrooxEngine.FullBatch)">
-            <summary>
-            Queues a FullBatch to be encoded, implicitly sets IsProcessing
-            </summary>
-            <param name="batch">The patch to process</param>
-        </member>
-        <member name="M:Outflow.FullBatcher.TryQueueMessage(FrooxEngine.SyncMessage)">
-            <summary>
-            Tries to queue a reliable message. If no work is being done, then queueing will be skipped
-            </summary>
-            <param name="reliable">The message to encode</param>
-            <returns></returns>
-        </member>
-        <member name="M:Outflow.FullBatcher.TryFlushQueuedMessages">
-            <summary>
-            Attempts to flush the queued messages. Only flushes when work is being done and messages are queued
-            </summary>
-            <returns>How many messages were flushed. -2 if processing is going on, -1 if there are simply no messages to flush</returns>
-        </member>
-        <member name="M:Outflow.FullBatcher.Dispose">
-            <summary>
-            Disposes of the batcher and stops all processing
-            </summary>
-        </member>
-        <member name="M:Outflow.FullBatcher.Finalize">
-            <summary>
-            If somehow the batcher is orphaned, dispose of it properly
-            </summary>
-        </member>
         <member name="T:Outflow.Outflow.Session_Patches">
             <summary>
             Patches for FrooxEngine.Session
             </summary>
         </member>
-        <member name="M:Outflow.Outflow.Session_Patches.EncodeLoop_Prefix(FrooxEngine.Session,System.Threading.AutoResetEvent@,Elements.Core.SpinQueue{FrooxEngine.SyncMessage}@)">
+        <member name="M:Outflow.Outflow.Session_Patches.EnqueueForTransmission_Transpiler(System.Collections.Generic.IEnumerable{HarmonyLib.CodeInstruction},System.Reflection.Emit.ILGenerator)">
             <summary>
-            Replaces the EncodeLoop method with a prefix
+            Transpiler for <see cref="M:FrooxEngine.Session.EnqueueForTransmission(FrooxEngine.SyncMessage,System.Boolean)"/> to add StreamMessages to their own queue and skip inserting them the normal queue
             </summary>
-            <param name="__instance">Session instance to work on</param>
-            <param name="___encodingThreadEvent">Event to trigger an encode cycle</param>
-            <param name="___messagesToTransmit">Queue of messages to transmit</param>
-            <returns>Whether to run the original function</returns>
+            <param name="instructions"></param>
+            <param name="iLGen"></param>
+            <returns></returns>
+        </member>
+        <member name="M:Outflow.Outflow.Session_Patches.Run_Prefix(FrooxEngine.Session)">
+            <summary>
+            Prefixes Session.Run() to start a thread to process exclusively SyncMessages
+            </summary>
+            <param name="__instance">The session to process StreamMessages for</param>
+        </member>
+        <member name="M:Outflow.Outflow.Session_Patches.Dispose_Transpiler(System.Collections.Generic.IEnumerable{HarmonyLib.CodeInstruction})">
+            <summary>
+            Applies a Transpiler patch on <see cref="M:FrooxEngine.Session.Dispose"/> to properly shut down the StreamMessage processing thread
+            </summary>
+            <param name="instructions"></param>
+        </member>
+        <member name="M:Outflow.Outflow.Session_Patches.MessagesToTransmitCount_Postfix(FrooxEngine.Session,System.Int32@)">
+            <summary>
+            Postfixes the getter for <see cref="P:FrooxEngine.Session.MessagesToTransmitCount"/> to include the StreamMessage queue in the statistic to remain accurate
+            </summary>
+            <param name="__instance"></param>
+            <param name="__result"></param>
+        </member>
+        <member name="T:Outflow.SessionHelpers">
+            <summary>
+            Helper methods for interacting with the session's StreamMessage queue
+            </summary>
+        </member>
+        <member name="F:Outflow.SessionHelpers.SessionStreamQueue">
+            <summary>
+            Correlation between sessions and StreamMessage processing data
+            </summary>
+        </member>
+        <member name="M:Outflow.SessionHelpers.EnqueueStreamForTransmission(FrooxEngine.Session,FrooxEngine.SyncMessage)">
+            <summary>
+            Enqueues a StreamMessage into that session's StreamMessage queue
+            </summary>
+            <param name="session">The session to enqueue a StreamMessage for</param>
+            <param name="msg">The message to enqueue</param>
+            <returns></returns>
+        </member>
+        <member name="M:Outflow.SessionHelpers.StreamLoop(FrooxEngine.Session,System.Threading.AutoResetEvent,System.Collections.Concurrent.ConcurrentQueue{FrooxEngine.SyncMessage})">
+            <summary>
+            The processing loop for processing StreamMessages exclusively
+            </summary>
+            <param name="session">The session to operate on</param>
+            <param name="ev">The event to wait on</param>
+            <param name="streamMessagesToSend">The queue to operate on</param>
+        </member>
+        <member name="M:Outflow.SessionHelpers.RemoveStreamQueue(FrooxEngine.Session)">
+            <summary>
+            Removes a StreamMessage queue from the dictionary for a given session
+            </summary>
+            <param name="session">The session to remove a queue from</param>
+        </member>
+        <member name="M:Outflow.SessionHelpers.AddStreamQueue(FrooxEngine.Session,System.Threading.AutoResetEvent,System.Collections.Concurrent.ConcurrentQueue{FrooxEngine.SyncMessage})">
+            <summary>
+            Adds a StreamMessage queue to the dictionary for use in other methods
+            </summary>
+            <param name="session">The session to add the queue for</param>
+            <param name="ev">The event the queue processor will wait on</param>
+            <param name="queue">The queue the processor will operate with</param>
+        </member>
+        <member name="M:Outflow.SessionHelpers.DisposeStreamMessageProcessor(FrooxEngine.Session)">
+            <summary>
+            Only called when the Session is disposed
+            </summary>
+            <param name="session">The session to operate on</param>
         </member>
     </members>
 </doc>

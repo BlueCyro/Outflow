@@ -1,10 +1,9 @@
 ﻿using HarmonyLib;
 using ResoniteModLoader;
 using FrooxEngine;
-using Elements.Core;
-using MonoMod.Utils;
 using System.Reflection;
 using System.Collections.Concurrent;
+using System.Reflection.Emit;
 
 namespace Outflow;
 
@@ -23,98 +22,141 @@ public class Outflow : ResoniteMod
         Harmony harmony = new("net.Cyro.Outflow");
         Config = GetConfiguration();
         Config?.Save(true);
-        
-        // Manual patch
-        MethodInfo encodeLoopInfo = typeof(Session).GetMethod("EncodeLoop", BindingFlags.Instance | BindingFlags.NonPublic);
-        MethodInfo patchInfo = ((Delegate)Session_Patches.EncodeLoop_Prefix).Method;
 
-        harmony.Patch(encodeLoopInfo, prefix: new(patchInfo));
+        harmony.PatchAll();
     }
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
-
 
 
 
     /// <summary>
     /// Patches for FrooxEngine.Session
     /// </summary>
+    [HarmonyPatch(typeof(Session))]
     public static class Session_Patches
     {
         /// <summary>
-        /// Replaces the EncodeLoop method with a prefix
+        /// Transpiler for <see cref="Session.EnqueueForTransmission(SyncMessage, bool)"/> to add StreamMessages to their own queue and skip inserting them the normal queue
         /// </summary>
-        /// <param name="__instance">Session instance to work on</param>
-        /// <param name="___encodingThreadEvent">Event to trigger an encode cycle</param>
-        /// <param name="___messagesToTransmit">Queue of messages to transmit</param>
-        /// <returns>Whether to run the original function</returns>
-        public static bool EncodeLoop_Prefix(Session __instance, ref AutoResetEvent ___encodingThreadEvent, ref SpinQueue<SyncMessage> ___messagesToTransmit)
+        /// <param name="instructions"></param>
+        /// <param name="iLGen"></param>
+        /// <returns></returns>
+        [HarmonyTranspiler]
+        [HarmonyPatch("EnqueueForTransmission")]
+        public static IEnumerable<CodeInstruction> EnqueueForTransmission_Transpiler(IEnumerable<CodeInstruction> instructions, ILGenerator iLGen)
         {
-            // Since this method is no longer coming from the class itself, reflection is required for all of the property setters to properly increment the stats
-            Type seshType = typeof(Session);
-            var setDeltas = (Action<int>)seshType.GetProperty("TotalSentDeltas").GetSetMethod(true).CreateDelegate(typeof(Action<int>), __instance);
-            var setFulls = (Action<int>)seshType.GetProperty("TotalSentFulls").GetSetMethod(true).CreateDelegate(typeof(Action<int>), __instance);
-            var setConfirms = (Action<int>)seshType.GetProperty("TotalSentConfirmations").GetSetMethod(true).CreateDelegate(typeof(Action<int>), __instance);
-            var setControls = (Action<int>)seshType.GetProperty("TotalSentControls").GetSetMethod(true).CreateDelegate(typeof(Action<int>), __instance);
-            var setStreams = (Action<int>)seshType.GetProperty("TotalSentStreams").GetSetMethod(true).CreateDelegate(typeof(Action<int>), __instance);
+            yield return new(OpCodes.Ldarg_0); // Load the Session instance to pass to the enqueue method
+            yield return new(OpCodes.Ldarg_1); // Load the SyncMessage to pass through to the enqueue method
+            yield return new(OpCodes.Call, ((Delegate)SessionHelpers.EnqueueStreamForTransmission).Method); // Call the enqueue method
+            
 
-
-            ConcurrentDictionary<Task, byte> fullBatchTasks = new();
-            Queue<DeltaBatch> heldDeltas = new();
-            FullBatcher batcher = new(__instance);
-            Msg($"Replaced EncodeLoop successfully!");
-
+            Label targetLabel = iLGen.DefineLabel();
+            List<CodeInstruction> codes = instructions.ToList();
             
             
-            while (true)
+            bool foundJump = false;
+            for (int i = 0; i < codes.Count; i++)
             {
-                ___encodingThreadEvent.WaitOne(); // Wait for next encoding cycle
-
-
-                if (__instance.IsDisposed)
+                if (codes[i].Calls(typeof(EventWaitHandle).GetMethod("Set")))
                 {
-                    ___encodingThreadEvent.Dispose();
-                    batcher.Dispose();
+                    codes[i + 2].labels.Add(targetLabel); // Assign a label to the 'if' statement that appears right after streams are normally encoded
+                    foundJump = true;
+                    Msg("Successfully found jump point");
                     break;
                 }
+            }
 
 
-                while (___messagesToTransmit.TryDequeue(out SyncMessage val)) // De-queue messages to send
+            if (!foundJump)
+                throw new KeyNotFoundException("Could not find jump point, aborting!");
+
+
+            // Jump straight to the 'if' statement and skip enqueueing into the normal message queue if we have a StreamMessage. Ensures stats are incremented properly
+            yield return new(OpCodes.Brtrue_S, targetLabel);
+            
+            // Return the rest of the function, unchanged
+            foreach (var code in codes)
+            {
+                yield return code;
+            }
+
+
+            Msg("Successfully patched Session.EnqueueForTransmission");
+        }
+
+
+
+        /// <summary>
+        /// Prefixes Session.Run() to start a thread to process exclusively SyncMessages
+        /// </summary>
+        /// <param name="__instance">The session to process StreamMessages for</param>
+        [HarmonyPrefix]
+        [HarmonyPatch("Run")]
+        public static void Run_Prefix(Session __instance)
+        {
+            // Private so reflection is required, not really a big deal since this isn't a hot piece of code
+            MethodInfo runThread = typeof(Session).GetMethod("RunThreadLoop", BindingFlags.Instance | BindingFlags.NonPublic);
+
+
+            AutoResetEvent ev = new(false);
+            ConcurrentQueue<SyncMessage> queue = new();
+
+
+            // Start a new thread to process exclusively StreamMessages
+            Thread streamThread = new(() => runThread.Invoke(__instance, [() => SessionHelpers.StreamLoop(__instance, ev, queue)]))
+            {
+                IsBackground = true,
+                Priority = ThreadPriority.AboveNormal,
+                Name = "StreamMessage Encoding"
+            };
+            streamThread.Start();
+
+
+            // Add the event and the queue to a dictionary so it can be accessed from other methods
+            __instance.AddStreamQueue(ev, queue);
+            Msg("Starting StreamMessage processing on a separate thread");
+        }
+
+
+
+        /// <summary>
+        /// Applies a Transpiler patch on <see cref="Session.Dispose"/> to properly shut down the StreamMessage processing thread
+        /// </summary>
+        /// <param name="instructions"></param>
+        [HarmonyTranspiler]
+        [HarmonyPatch("Dispose")]
+        public static IEnumerable<CodeInstruction> Dispose_Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            MethodInfo disposeCall = typeof(Session).GetProperty("IsDisposed").GetSetMethod(true);
+
+            foreach (var code in instructions)
+            {
+                if (code.Calls(disposeCall))
                 {
-                    int flushed = batcher.TryFlushQueuedMessages(); // Try to flush queued messages. Only flushes if no FullBatches are cooking and messages are ready to be de-queued
-
-                    if (val.Targets.Count > 0)
-                    {
-                        switch (val)
-                        {
-                            case DeltaBatch dtb:
-                                setDeltas(__instance.TotalSentDeltas + 1);
-                                break;
-                            case FullBatch fb:
-                                setFulls(__instance.TotalSentFulls + 1);
-                                break;
-                            case ConfirmationMessage cfm:
-                                setConfirms(__instance.TotalSentConfirmations + 1);
-                                break;
-                            case ControlMessage ctm:
-                                setControls(__instance.TotalSentControls + 1);
-                                break;
-                            case StreamMessage stm:
-                                setStreams(__instance.TotalSentStreams + 1);
-                                Debug($"Stream sent, sender version: {stm.SenderStateVersion}");
-                                break;
-                        }
-
-
-                        if (batcher.TryQueueMessage(val)) // Catch all reliable messages if a FullBatch is cooking, leave streams
-                            continue;
-                        
-
-                        __instance.NetworkManager.TransmitData(val.Encode());
-                    }
-                    val.Dispose();
+                    yield return code;
+                    yield return new(OpCodes.Ldarg_0); // Load the Session instance to pass to the disposer method
+                    yield return new(OpCodes.Call, ((Delegate)SessionHelpers.DisposeStreamMessageProcessor).Method); // Emit a call to the disposer method
+                }
+                else
+                {
+                    yield return code;
                 }
             }
-            return false;
+        }
+
+
+
+        /// <summary>
+        /// Postfixes the getter for <see cref="Session.MessagesToTransmitCount"/> to include the StreamMessage queue in the statistic to remain accurate
+        /// </summary>
+        /// <param name="__instance"></param>
+        /// <param name="__result"></param>
+        public static void MessagesToTransmitCount_Postfix(Session __instance, ref int __result)
+        {
+            if (SessionHelpers.SessionStreamQueue.TryGetValue(__instance, out var data))
+            {
+                __result += data.streamMessagesToSend.Count;
+            }
         }
     }
 }
