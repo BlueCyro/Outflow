@@ -71,7 +71,7 @@ public class Outflow : ResoniteMod
                 throw new KeyNotFoundException("Could not find jump point, aborting!");
 
 
-            // Jump straight to the 'if' statement and skip enqueueing into the normal message queue if we have a StreamMessage. Ensures stats are incremented properly
+            // Jump straight to the 'if' statement and skip enqueueing into the normal message queue if we have a StreamMessage. Ensures stats are still incremented properly
             yield return new(OpCodes.Brtrue_S, targetLabel);
             
             // Return the rest of the function, unchanged
@@ -81,7 +81,7 @@ public class Outflow : ResoniteMod
             }
 
 
-            Msg("Successfully patched Session.EnqueueForTransmission");
+            Msg("Successfully patched Session.EnqueueForTransmission()");
         }
 
 
@@ -94,8 +94,10 @@ public class Outflow : ResoniteMod
         [HarmonyPatch("Run")]
         public static void Run_Prefix(Session __instance)
         {
-            // Private so reflection is required, not really a big deal since this isn't a hot piece of code
-            MethodInfo runThread = typeof(Session).GetMethod("RunThreadLoop", BindingFlags.Instance | BindingFlags.NonPublic);
+            // Private so reflection is required, not really a big deal to do it the easy way since this isn't a hot piece of code
+            MethodInfo runThread =
+                typeof(Session)
+                .GetMethod("RunThreadLoop", BindingFlags.Instance | BindingFlags.NonPublic);
 
 
             AutoResetEvent ev = new(false);

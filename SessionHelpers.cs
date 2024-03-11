@@ -20,7 +20,7 @@ public static class SessionHelpers
     /// </summary>
     /// <param name="session">The session to enqueue a StreamMessage for</param>
     /// <param name="msg">The message to enqueue</param>
-    /// <returns></returns>
+    /// <returns>Whether the message was a stream</returns>
     public static bool EnqueueStreamForTransmission(Session session, SyncMessage msg)
     {
         bool isStream = msg is StreamMessage;
@@ -47,14 +47,20 @@ public static class SessionHelpers
     /// <param name="streamMessagesToSend">The queue to operate on</param>
     public static void StreamLoop(Session session, AutoResetEvent ev, ConcurrentQueue<SyncMessage> streamMessagesToSend)
     {
-        var setStreamCount = (Action<int>)typeof(Session).GetProperty("TotalSentStreams").GetSetMethod(true).CreateDelegate(typeof(Action<int>), session);
+        var setStreamCount = (Action<int>) // Cache setter for TotalSentStreams
+            typeof(Session)
+            .GetProperty("TotalSentStreams")
+            .GetSetMethod(true)
+            .CreateDelegate(typeof(Action<int>), session);
+
+
         Outflow.Msg($"StreamMessage processing successfully initiated!");
 
 
         while (true)
         {
             ev.WaitOne();
-            if (session.IsDisposed)
+            if (session.IsDisposed) // Break on disposal
                 break;
 
 
@@ -64,8 +70,12 @@ public static class SessionHelpers
                 {
                     setStreamCount(session.TotalSentStreams + 1);
                     session.NetworkManager.TransmitData(result.Encode());
+
+
                     Outflow.Debug($"Successfully processed StreamMessage #{result.SenderStateVersion}");
                 }
+
+
                 result.Dispose();
             }
         }

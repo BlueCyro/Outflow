@@ -38,7 +38,7 @@
         </member>
         <member name="T:Outflow.SessionHelpers">
             <summary>
-            Helper methods for interacting with the session's StreamMessage queue
+            Helper methods for interacting with a <see cref="T:FrooxEngine.Session"/>'s StreamMessage queue
             </summary>
         </member>
         <member name="F:Outflow.SessionHelpers.SessionStreamQueue">
