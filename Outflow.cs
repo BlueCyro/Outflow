@@ -133,7 +133,7 @@ public class Outflow : ResoniteMod
             {
                 if (code.Calls(disposeCall))
                 {
-                    yield return code;
+                    yield return code; // Emit the original IsDisposed setter
                     yield return new(OpCodes.Ldarg_0); // Load the Session instance to pass to the disposer method
                     yield return new(OpCodes.Call, ((Delegate)SessionHelpers.DisposeStreamMessageProcessor).Method); // Emit a call to the disposer method
                 }
