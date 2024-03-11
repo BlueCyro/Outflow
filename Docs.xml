@@ -52,7 +52,7 @@
             </summary>
             <param name="session">The session to enqueue a StreamMessage for</param>
             <param name="msg">The message to enqueue</param>
-            <returns></returns>
+            <returns>Whether the message was a stream</returns>
         </member>
         <member name="M:Outflow.SessionHelpers.StreamLoop(FrooxEngine.Session,System.Threading.AutoResetEvent,System.Collections.Concurrent.ConcurrentQueue{FrooxEngine.SyncMessage})">
             <summary>
