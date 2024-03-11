@@ -48,7 +48,7 @@ graph LR
         While[While queue isn't empty]
         Take[Take one from queue]
         Encode[Wait for encode]
-        Transmit(Transmit packet 📡)
+        Transmit([Transmit packet 📡])
 
 
         While --> Take
@@ -92,7 +92,7 @@ graph LR
         While[While queue isn't empty]
         Take[Take one from queue]
         Encode[Wait for encode]
-        Transmit(Transmit packet 📡)
+        Transmit([Transmit packet 📡])
 
 
         While --> Take
@@ -108,7 +108,7 @@ graph LR
         WhileStream[While queue isn't empty]
         TakeStream[Take one from queue]
         EncodeStream[Wait for encode]
-        TransmitStream(Transmit packet 📡)
+        TransmitStream([Transmit packet 📡])
 
 
         WhileStream --> TakeStream
