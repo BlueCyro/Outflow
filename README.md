@@ -16,10 +16,9 @@ Simply drop the mod into your `rml_mods` folder within the Resonite directory an
 
 # How do we solve this?
 
-* Move the FullBatch to process outside of the encoding loop
-    - While the FullBatch is encoding, save all other messages (aside from stream messages)
-    - When the FullBatch is done, send it and then send all other packets behind it
-    - This ensures that streams (aka the stuff that carries your voice and movement data) don't get interrupted
+* Move the StreamMessage processing to it's own exclusive thread
+    - This ensures that streams (aka the stuff that carries your voice and movement data) don't get interrupted by a FullBatch encode
+    - All other reliable packets stay on the default queue and are unaffected
 
 
 # How does it work?
@@ -28,79 +27,96 @@ I'm glad you didn't ask! Here's a massive MermaidJS diagram for your viewing ple
 
 ```mermaid
 ---
-title: Packet encoding
+title: How packets are processed normally
 ---
 %%{ init: { 'flowchart': { 'curve': 'monotoneX' } } }%%
 graph LR
-    subgraph Queues
-        QueuedReliable[(Queued Reliable\npackets)]
-        QueuedFulls[(Queued FullBatch\npackets)]
+    style Queue fill:#48392A,stroke:#E69E50,stroke-width:2px
+    subgraph Queue[Queue packets to send]
+    direction LR
+        NewPacket[New packet to send]
+        Store[Store in queue]
+        PacketQueue[(Packet Queue)]
+
+        
+        NewPacket --> Store --x PacketQueue
     end
 
-    subgraph FullBatch Processing Loop
-        StartProcessing[Start Processing\nIsProcessing = true]
-        ProcessFull[Process FullBatch]
-        FullQueueEmpty{FullBatch queue\nempty?}
-        Wait[Wait for new FullBatches]
 
-        StartProcessing --> ProcessFull
-        ProcessFull -.-|Takes one| QueuedFulls
-        linkStyle 1 stroke:#E69E50,stroke-width:5px
-        ProcessFull --> FullQueueEmpty
+    style ProcessLoop fill:#484A2C,stroke:#F8F770,stroke-width:2px
+    subgraph ProcessLoop[Packet Processing Loop]
+        While[While queue isn't empty]
+        Take[Take one from queue]
+        Encode[Wait for encode]
+        Transmit(Transmit packet 📡)
 
-        FullQueueEmpty -->|Yes| Wait
-        %%linkStyle 3 stroke:#59EB5C
-        FullQueueEmpty-->|No| StartProcessing
-        %%linkStyle 4 stroke:#FF7676
+
+        While --> Take
+        Take --> Encode --> Transmit --> While
+        PacketQueue -.->|Takes one| Take
+        linkStyle 6 stroke:#E69E50,stroke-width:4px
     end
-
-    
-
-    New((New Reliable Packet))
-    MessagesQueued{Are messages\nqueued to send?}
-    Flush[Flush queue]
-    ShouldQueue{Should packet queue?}
-    SetProcessing(IsProcessing = true)
-
-    QueueFull[Queue FullBatch]
-    QueueReliable[Queue Reliable]
-    Next[Next packet]
-
-
-    New --> MessagesQueued
-    MessagesQueued -->|Yes| Flush --> ShouldQueue
-    linkStyle 6,7 stroke:#59EB5C
-
-    MessagesQueued -->|No| ShouldQueue
-    linkStyle 8 stroke:#FF7676
-
-    Conditions>Packets queue when:\nIsProcessing is true\nAND\nThe packet is not a stream\nOR\nThe packet is a FullBatch\n] -.- ShouldQueue
-
-    Flush -.-|Takes all| QueuedReliable
-    linkStyle 10 stroke:#59EB5C
-
-    ShouldQueue -->|Is FullBatch| QueueFull
-    linkStyle 11 stroke:#61D1FA
-
-    ShouldQueue -->|FullBatches are Processing\n&\nIs not StreamMessage| QueueReliable
-    linkStyle 12 stroke:#F8F770
-    
-    QueueReliable --> SetProcessing --> Next
-    linkStyle 13,14 stroke:#F8F770
-
-    ShouldQueue -->|Is StreamMessage| Next
-    linkStyle 15 stroke:#BA64F2
-
-    QueueFull --> Next
-    linkStyle 16 stroke:#61D1FA
-
-    QueueFull -.-x|Inserts| QueuedFulls
-    linkStyle 17 stroke:#61D1FA
-
-    QueueReliable -.-x|Inserts| QueuedReliable
-    linkStyle 18 stroke:#F8F770
 ```
 
+```mermaid
+---
+title: How packets are processed with Outflow
+---
+%%{ init: { 'flowchart': { 'curve': 'monotoneX' } } }%%
+graph LR
+    style Queue fill:#284C5D,stroke:#61D1FA,stroke-width:2px
+    subgraph Queue[Queue packets to send]
+    direction LR
+        PacketQueue[(Packet Queue)]
+        StreamQueue[(Stream Packet\nQueue)]
+
+
+        NewPacket[New packet to send]
+        Store[Store in normal queue]
+        IsStream{Is StreamMessage?}
+        StoreStream[Store in stream queue]
+
+        
+        NewPacket --> IsStream
+        IsStream -->|No| Store --x PacketQueue
+        linkStyle 1,2 stroke:#FF7676
+
+        IsStream -->|Yes| StoreStream --x StreamQueue
+        linkStyle 3,4 stroke:#59EB5C
+    end
+
+
+
+    style ProcessLoop fill:#484A2C,stroke:#F8F770,stroke-width:2px
+    subgraph ProcessLoop[Packet Processing Loop]
+        While[While queue isn't empty]
+        Take[Take one from queue]
+        Encode[Wait for encode]
+        Transmit(Transmit packet 📡)
+
+
+        While --> Take
+        Take --> Encode --> Transmit --> While
+        PacketQueue -.->|Takes one| Take
+        linkStyle 9 stroke:#E69E50,stroke-width:4px
+    end
+
+
+
+    style StreamProcessLoop fill:#492F64,stroke:#BA64F2,stroke-width:2px
+    subgraph StreamProcessLoop[Stream Packet Processing Loop]
+        WhileStream[While queue isn't empty]
+        TakeStream[Take one from queue]
+        EncodeStream[Wait for encode]
+        TransmitStream(Transmit packet 📡)
+
+
+        WhileStream --> TakeStream
+        TakeStream --> EncodeStream --> TransmitStream --> WhileStream
+        StreamQueue -.->|Takes one| TakeStream
+        linkStyle 14 stroke:#BA64F2,stroke-width:4px
+    end
+```
 
 # Why isn't this in the game by default?
 
