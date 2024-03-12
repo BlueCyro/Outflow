@@ -37,7 +37,7 @@ public class Outflow : ResoniteMod
     public static class Session_Patches
     {
         /// <summary>
-        /// Transpiler for <see cref="Session.EnqueueForTransmission(SyncMessage, bool)"/> to add StreamMessages to their own queue and skip inserting them the normal queue
+        /// Transpiler for <see cref="Session.EnqueueForTransmission(SyncMessage, bool)"/> to add StreamMessages to their own queue and skip inserting them into the normal queue
         /// </summary>
         /// <param name="instructions"></param>
         /// <param name="iLGen"></param>
