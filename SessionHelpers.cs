@@ -32,7 +32,10 @@ public static class SessionHelpers
             data.streamSendEvent.Set();
         }
         
+
+        #if DEBUG
         Outflow.Debug($"Encoded StreamMessage with state #{msg.SenderStateVersion}");
+        #endif
 
         return isStream;
     }
@@ -72,7 +75,9 @@ public static class SessionHelpers
                     session.NetworkManager.TransmitData(result.Encode());
 
 
+                    #if DEBUG
                     Outflow.Debug($"Successfully processed StreamMessage #{result.SenderStateVersion}");
+                    #endif
                 }
 
 
@@ -96,14 +101,18 @@ public static class SessionHelpers
         if (SessionStreamQueue.ContainsKey(session))
         {
             SessionStreamQueue.TryRemove(session, out var _);
+
+
+            #if DEBUG
             Outflow.Debug($"Removed StreamMessage queue");
+            #endif
         }
     }
 
 
 
     /// <summary>
-    /// Adds a StreamMessage queue to the dictionary for use in other methods
+    /// Adds a StreamMessage queue to the dictionary for a given session
     /// </summary>
     /// <param name="session">The session to add the queue for</param>
     /// <param name="ev">The event the queue processor will wait on</param>
@@ -111,18 +120,22 @@ public static class SessionHelpers
     public static void AddStreamQueue(this Session session, AutoResetEvent ev, ConcurrentQueue<SyncMessage> queue)
     {
         SessionStreamQueue.TryAdd(session, (ev, queue));
+
+
+        #if DEBUG
         Outflow.Debug($"Added StreamMessage queue");
+        #endif
     }
 
 
 
     /// <summary>
-    /// Only called when the Session is disposed
+    /// Only called when the Session is disposed, disposes of the StreamMessage processor
     /// </summary>
     /// <param name="session">The session to operate on</param>
     public static void DisposeStreamMessageProcessor(Session session)
     {
-        if (SessionHelpers.SessionStreamQueue.TryGetValue(session, out var data))
+        if (SessionStreamQueue.TryGetValue(session, out var data))
             data.streamSendEvent.Set();
         
         Outflow.Msg("Properly shut down StreamMessage processing thread");

@@ -11,7 +11,7 @@
         </member>
         <member name="M:Outflow.Outflow.Session_Patches.EnqueueForTransmission_Transpiler(System.Collections.Generic.IEnumerable{HarmonyLib.CodeInstruction},System.Reflection.Emit.ILGenerator)">
             <summary>
-            Transpiler for <see cref="M:FrooxEngine.Session.EnqueueForTransmission(FrooxEngine.SyncMessage,System.Boolean)"/> to add StreamMessages to their own queue and skip inserting them the normal queue
+            Transpiler for <see cref="M:FrooxEngine.Session.EnqueueForTransmission(FrooxEngine.SyncMessage,System.Boolean)"/> to add StreamMessages to their own queue and skip inserting them into the normal queue
             </summary>
             <param name="instructions"></param>
             <param name="iLGen"></param>
@@ -70,7 +70,7 @@
         </member>
         <member name="M:Outflow.SessionHelpers.AddStreamQueue(FrooxEngine.Session,System.Threading.AutoResetEvent,System.Collections.Concurrent.ConcurrentQueue{FrooxEngine.SyncMessage})">
             <summary>
-            Adds a StreamMessage queue to the dictionary for use in other methods
+            Adds a StreamMessage queue to the dictionary for a given session
             </summary>
             <param name="session">The session to add the queue for</param>
             <param name="ev">The event the queue processor will wait on</param>
@@ -78,7 +78,7 @@
         </member>
         <member name="M:Outflow.SessionHelpers.DisposeStreamMessageProcessor(FrooxEngine.Session)">
             <summary>
-            Only called when the Session is disposed
+            Only called when the Session is disposed, disposes of the StreamMessage processor
             </summary>
             <param name="session">The session to operate on</param>
         </member>
