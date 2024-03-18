@@ -20,11 +20,11 @@
 
   <!--This will test for the default Steam installation paths for Resonite on Windows and Linux.-->
   <PropertyGroup Condition="'$(ResonitePath)'==''">
-    <ResonitePath Condition="'$(OS)' == 'Windows_NT' and Exists('C:\Program Files (x86)\Steam\steamapps\common\Resonite\')">C:\Program Files (x86)\Steam\steamapps\common\Resonite\</ResonitePath> 
+    <ResonitePath Condition="'$(OS)' == 'Windows_NT' and Exists('C:/Program Files (x86)/Steam/steamapps/common/Resonite/')">C:/Program Files (x86)/Steam/steamapps/common/Resonite/</ResonitePath> 
     <ResonitePath Condition="'$(OS)' != 'Windows_NT' and Exists('$(HOME)/.local/share/Steam/steamapps/common/Resonite/')">$(HOME)/.local/share/Steam/steamapps/common/Resonite/</ResonitePath>
     <!--If neither path above exists, you can define your custom Resonite install directory here -->
     <ResonitePath Condition="'$(ResonitePath)'==''">/Custom/Resonite/Install/Path</ResonitePath>
-    <HeadlessPath>$(ResonitePath)Headless\</HeadlessPath>
+    <!--HeadlessPath>$(ResonitePath)Headless\</HeadlessPath-->
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,13 +32,13 @@
       <HintPath>$(ResonitePath)Libraries/ResoniteModLoader.dll</HintPath>
     </Reference>
     <Reference Include="FrooxEngine">
-      <HintPath>$(ResonitePath)Headless/FrooxEngine.dll</HintPath>
+      <HintPath>$(ResonitePath)Resonite_Data/Managed/FrooxEngine.dll</HintPath>
     </Reference>
     <Reference Include="Elements.Core">
-      <HintPath>$(ResonitePath)Headless/Elements.Core.dll</HintPath>
+      <HintPath>$(ResonitePath)Resonite_Data/Managed/Elements.Core.dll</HintPath>
     </Reference>
     <Reference Include="Elements.Assets">
-      <HintPath>$(ResonitePath)Headless/Elements.Assets.dll</HintPath>
+      <HintPath>$(ResonitePath)Resonite_Data/Managed/Elements.Assets.dll</HintPath>
     </Reference>
   </ItemGroup>
 
