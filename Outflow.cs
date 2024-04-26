@@ -4,6 +4,7 @@ using FrooxEngine;
 using System.Reflection;
 using System.Collections.Concurrent;
 using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 
 namespace Outflow;
 
@@ -24,6 +25,7 @@ public class Outflow : ResoniteMod
         Harmony harmony = new("net.Cyro.Outflow");
         Config = GetConfiguration();
         Config?.Save(true);
+        RuntimeHelpers.RunClassConstructor(typeof(Session_Patches).TypeHandle);
         harmony.PatchAll();
     }
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member

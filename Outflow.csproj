@@ -40,11 +40,9 @@
     <Reference Include="Elements.Assets">
       <HintPath>$(ResonitePath)Resonite_Data/Managed/Elements.Assets.dll</HintPath>
     </Reference>
-  </ItemGroup>
-
-
-  <ItemGroup>
-    <PackageReference Include="Lib.Harmony" Version="2.2.2.0" />
+    <Reference Include="0Harmony">
+      <HintPath>$(ResonitePath)Libraries/0Harmony.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   
@@ -54,7 +52,7 @@
 
 
   <Target Name="MoveBinary" AfterTargets="Publish">
-    <Copy SourceFiles="$(PublishDir)$(TargetFileName)" DestinationFolder="./$(ReleaseBuild)" />
+    <Copy SourceFiles="$(PublishDir)$(TargetFileName)" DestinationFolder="$(ReleaseBuild)" />
   </Target>
 
 
